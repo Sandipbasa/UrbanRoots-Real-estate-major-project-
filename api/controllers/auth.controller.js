@@ -8,13 +8,14 @@ export const signup = async (req, res, next) => {
 
     try {
         await newUser.save();
-        res.status(201).json({ message: 'User created successfully!' });
+        res.status(201).json({ success: true, message: 'User created successfully!' });
     } catch (error) {
         if (error.code === 11000) { // MongoDB duplicate key error code
-            res.status(400).json({ message: 'Username or email already exists!' });
+            // Pass the error to the error-handling middleware
+            next({ statusCode: 400, message: 'Username or email already exists!' });
         } else {
-            res.status(500).json({ message: error.message || 'Something went wrong!' });
+            // Pass other errors to the error-handling middleware
+            next(error);
         }
-        next(error);
     }
 };
