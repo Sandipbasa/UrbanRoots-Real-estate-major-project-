@@ -1,9 +1,19 @@
 import { useSelector, useDispatch } from 'react-redux';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { updateUserStart, updateUserSuccess, updateUserFailure, deleteUserFailure, deleteUserStart, deleteUserSuccess, signOut } from '../redux/user/userSlice';
+import {
+  getDownloadURL,
+  getStorage,
+  ref,
+  uploadBytesResumable,
+} from 'firebase/storage';
+import app from '../firebase'; // Default import
 
 export default function Profile() {
   const { currentUser, loading } = useSelector((state) => state.user);
+  const [file, setFile] = useState(undefined);
+  const [filePerc, setFilePerc] = useState(0);
+  const [fileUploadError, setFileUploadError] = useState(false);
   const [formData, setFormData] = useState({});
   const fileRef = useRef(null);
   const dispatch = useDispatch();
@@ -16,7 +26,8 @@ export default function Profile() {
     e.preventDefault();
     try {
       dispatch(updateUserStart());
-      
+      // Add your update user logic here
+      // Example: const res = await updateUserAPI(formData);
       dispatch(updateUserSuccess(res.data));
     } catch (error) {
       dispatch(updateUserFailure(error.message));
@@ -26,7 +37,8 @@ export default function Profile() {
   const handleDeleteUser = async () => {
     try {
       dispatch(deleteUserStart());
-      
+      // Add your delete user logic here
+      // Example: await deleteUserAPI();
       dispatch(deleteUserSuccess());
     } catch (error) {
       dispatch(deleteUserFailure(error.message));
@@ -35,11 +47,41 @@ export default function Profile() {
 
   const handleSignOut = async () => {
     try {
-      await signOutAPI(); 
+      await signOutAPI(); // Add your sign-out logic here
       dispatch(signOut());
     } catch (error) {
       console.error('Error during sign-out:', error);
     }
+  };
+
+  useEffect(() => {
+    if (file) {
+      handleFileUpload(file);
+    }
+  }, [file]);
+
+  const handleFileUpload = (file) => {
+    const storage = getStorage(app);
+    const fileName = new Date().getTime() + file.name;
+    const storageRef = ref(storage, fileName);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const progress =
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setFilePerc(Math.round(progress));
+      },
+      (error) => {
+        setFileUploadError(true);
+      },
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) =>
+          setFormData({ ...formData, avatar: downloadURL })
+        );
+      }
+    );
   };
 
   return (
@@ -51,7 +93,7 @@ export default function Profile() {
           ref={fileRef}
           hidden
           accept='image/*'
-          onChange={(e) => setFormData({ ...formData, avatar: e.target.files[0] })}
+          onChange={(e) => setFile(e.target.files[0])}
         />
         <img
           onClick={() => fileRef.current.click()}
@@ -59,6 +101,19 @@ export default function Profile() {
           alt='profile'
           className='rounded-full h-24 w-24 object-cover cursor-pointer self-center mt-2'
         />
+        <p className='text-sm self-center'>
+          {fileUploadError ? (
+            <span className='text-red-700'>
+              Error Image upload (image must be less than 2 MB)
+            </span>
+          ) : filePerc > 0 && filePerc < 100 ? (
+            <span className='text-slate-700'>{`Uploading ${filePerc}%`}</span>
+          ) : filePerc === 100 ? (
+            <span className='text-green-700'>Image successfully uploaded!</span>
+          ) : (
+            ''
+          )}
+        </p>
         <input
           type='text'
           placeholder='Username'
