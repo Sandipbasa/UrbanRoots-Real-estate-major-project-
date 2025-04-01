@@ -1,9 +1,8 @@
-import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import app from '../firebase.js';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { auth } from '../firebase';
 import { useDispatch } from 'react-redux';
-import { signInSuccess } from '../Redux/User/UserSlice.js';
+import { signInSuccess } from '../Redux/User/UserSlice';
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
 
 export default function OAuth() {
   const dispatch = useDispatch();
@@ -12,9 +11,8 @@ export default function OAuth() {
   const handleGoogleClick = async () => {
     try {
       const provider = new GoogleAuthProvider();
-      const auth = getAuth(app);
-
       const result = await signInWithPopup(auth, provider);
+      
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: {
@@ -29,8 +27,6 @@ export default function OAuth() {
 
       const data = await res.json();
       dispatch(signInSuccess(data));
-
-      // Navigate to the home page
       navigate('/');
     } catch (error) {
       console.error('Error during Google OAuth:', error);
