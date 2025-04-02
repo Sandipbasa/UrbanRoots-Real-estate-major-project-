@@ -28,6 +28,7 @@ export default [
         'warn',
         { allowConstantExport: true },
       ],
+      'no-shadow': ['error', { allow: ['error', 'err'] }]
     },
   },
 ]
